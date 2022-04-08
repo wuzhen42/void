@@ -1,14 +1,24 @@
-#[derive(Clone, Copy)]
+use super::{point::Pnt2, vector::Vec2};
+
+#[derive(Clone, Copy, Debug)]
 pub struct Rect {
-    pub width: f64,
-    pub height: f64,
+    pub min: Pnt2,
+    pub max: Pnt2,
 }
 
 impl Rect {
-    pub fn new() -> Rect {
+    pub fn center(&self) -> Pnt2 {
+        (self.min + self.max) / 2.0
+    }
+
+    pub fn extent(&self) -> Vec2 {
+        self.max - self.min
+    }
+
+    pub fn new(center: Pnt2, extent: Vec2) -> Rect {
         Rect {
-            width: 1.0,
-            height: 1.0,
+            min: center - extent / 2.0,
+            max: center + extent / 2.0,
         }
     }
 }

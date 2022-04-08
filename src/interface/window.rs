@@ -1,12 +1,12 @@
+use pollster;
 use winit::{
-    event::{Event, WindowEvent},
+    event::{Event, WindowEvent, DeviceEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-use pollster;
 
-use super::context::Context;
 use super::panel::Panel;
+use super::{context::Context};
 
 pub struct Window {
     panel: Panel,
@@ -36,7 +36,7 @@ impl Window {
                 } if window_id == window.id() => *contrl_flow = ControlFlow::Exit,
                 Event::RedrawRequested(window_id) if window_id == window.id() => {
                     self.panel.render(&context);
-                },
+                }
                 Event::MainEventsCleared => {
                     window.request_redraw();
                 }
