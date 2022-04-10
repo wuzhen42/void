@@ -6,35 +6,24 @@ pub struct RGB {
 }
 
 impl RGB {
-    pub fn black() -> RGB {
-        RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        }
-    }
-
-    pub fn red() -> RGB {
-        RGB {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-        }
-    }
-
-    pub fn green() -> RGB {
-        RGB {
-            r: 0.0,
-            g: 1.0,
-            b: 0.0,
-        }
-    }
-
-    pub fn blue() -> RGB {
-        RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 1.0,
-        }
-    }
+    pub const BLACK: Self = Self {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+    };
+    pub const RED: Self = Self {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+    };
+    pub const GREEN: Self = Self {
+        r: 0.0,
+        g: 1.0,
+        b: 0.0,
+    };
+    pub const BLUE: Self = Self {
+        r: 0.0,
+        g: 0.0,
+        b: 1.0,
+    };
 }
