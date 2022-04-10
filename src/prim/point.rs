@@ -7,6 +7,16 @@ pub struct Pnt2 {
     pub y: f64,
 }
 
+impl Pnt2 {
+    pub fn new(x: f64, y: f64) -> Pnt2 {
+        Pnt2 { x, y }
+    }
+
+    pub fn zero() -> Pnt2 {
+        Pnt2 { x: 0.0, y: 0.0 }
+    }
+}
+
 impl ops::Add<Pnt2> for Pnt2 {
     type Output = Pnt2;
     fn add(self, rhs: Pnt2) -> Self::Output {

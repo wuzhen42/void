@@ -32,7 +32,7 @@ pub struct Context {
     pub surface: wgpu::Surface,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
-    pub pipeline: wgpu::RenderPipeline,
+    pub pipeline_ui: wgpu::RenderPipeline,
 }
 
 impl Context {
@@ -64,17 +64,17 @@ impl Context {
         surface.configure(&device, &config);
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            label: Some("UI Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("pure.wgsl").into()),
         });
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Render Pipeline Layout"),
+            label: Some("UI Render Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
+        let pipeline_ui = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("UI Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -107,6 +107,6 @@ impl Context {
             },
             multiview: None,
         });
-        Context {surface, device, queue, pipeline}
+        Context {surface, device, queue, pipeline_ui}
     }
 }

@@ -6,13 +6,23 @@ pub struct Vec2 {
     pub y: f64,
 }
 
+impl Vec2 {
+    pub fn new(x: f64, y: f64) -> Vec2 {
+        Vec2 { x, y }
+    }
+}
+
 impl ops::Sub<Vec2> for Vec2 {
     type Output = Vec2;
     fn sub(self, rhs: Vec2) -> Self::Output {
-        Vec2 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-        }
+        Vec2::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl ops::Mul<Vec2> for Vec2 {
+    type Output = Vec2;
+    fn mul(self, rhs: Vec2) -> Self::Output {
+        Vec2::new(self.x * rhs.x, self.y * rhs.y)
     }
 }
 

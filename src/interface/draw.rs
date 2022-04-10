@@ -1,9 +1,13 @@
 use super::context::Vertex;
-use crate::prim::{bound::Rect, color::RGB};
+use crate::prim::{Rect, RGB};
 
 pub struct DrawBuffer {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u16>,
+}
+
+pub trait Panel {
+    fn draw(&self, rect: Rect) -> DrawBuffer;
 }
 
 impl DrawBuffer {
@@ -12,6 +16,17 @@ impl DrawBuffer {
             vertices: vec![],
             indices: vec![],
         }
+    }
+
+    pub fn chain(self, other: DrawBuffer) -> DrawBuffer {
+        let offset = self.vertices.len() as u16;
+        let vertices = [self.vertices.as_slice(), &other.vertices.as_slice()].concat();
+        let indices = self
+            .indices
+            .into_iter()
+            .chain(other.indices.iter().map(|x| x + offset))
+            .collect();
+        DrawBuffer { vertices, indices }
     }
 
     pub fn rect(&mut self, rect: Rect, color: RGB) {

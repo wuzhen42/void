@@ -15,7 +15,36 @@ impl Rect {
         self.max - self.min
     }
 
-    pub fn new(center: Pnt2, extent: Vec2) -> Rect {
+    pub fn topleft(&self) -> Pnt2 {
+        Pnt2 {
+            x: self.min.x,
+            y: self.max.y,
+        }
+    }
+
+    pub fn bottomleft(&self) -> Pnt2 {
+        self.min
+    }
+
+    pub fn topright(&self) -> Pnt2 {
+        self.max
+    }
+
+    pub fn empty() -> Rect {
+        Rect {
+            min: Pnt2::zero(),
+            max: Pnt2::zero(),
+        }
+    }
+
+    pub fn from_corner(bottomleft: Pnt2, topright: Pnt2) -> Rect {
+        Rect {
+            min: bottomleft,
+            max: topright,
+        }
+    }
+
+    pub fn from_center(center: Pnt2, extent: Vec2) -> Rect {
         Rect {
             min: center - extent / 2.0,
             max: center + extent / 2.0,
