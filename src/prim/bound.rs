@@ -32,8 +32,8 @@ impl Rect {
 
     pub fn empty() -> Rect {
         Rect {
-            min: Pnt2::zero(),
-            max: Pnt2::zero(),
+            min: Pnt2::ZERO,
+            max: Pnt2::ZERO,
         }
     }
 
