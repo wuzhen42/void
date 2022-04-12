@@ -4,12 +4,17 @@ use super::camera;
 use crate::interface::*;
 use crate::prim::*;
 
+struct RenderBackend {
+    pub pipeline: wgpu::RenderPipeline,
+    pub diffuse_bind_group: wgpu::BindGroup,
+    pub camera_bind_group: wgpu::BindGroup,
+    pub camera_bind_group_layout: wgpu::BindGroupLayout,
+}
+
 #[derive(Default)]
 pub struct Viewport {
-    pipeline: Option<wgpu::RenderPipeline>,
-    diffuse_bind_group: Option<wgpu::BindGroup>,
-    camera_bind_group: Option<wgpu::BindGroup>,
     camera: camera::Camera,
+    backend: Option<RenderBackend>,
 }
 
 impl Panel for Viewport {
@@ -48,14 +53,14 @@ impl Panel for Viewport {
                 }],
                 label: Some("camera_bind_group_layout"),
             });
-        self.camera_bind_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &camera_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: camera_buffer.as_entire_binding(),
             }],
             label: Some("camera_bind_group"),
-        }));
+        });
 
         // init diffuse bind group
         let diffuse_bytes = include_bytes!("happy-tree.png");
@@ -83,7 +88,7 @@ impl Panel for Viewport {
                 ],
                 label: Some("texture_bind_group_layout"),
             });
-        self.diffuse_bind_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &texture_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -96,7 +101,7 @@ impl Panel for Viewport {
                 },
             ],
             label: Some("diffuse_bind_group"),
-        }));
+        });
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Texture Shader"),
@@ -110,45 +115,52 @@ impl Panel for Viewport {
                 bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
                 push_constant_ranges: &[],
             });
-        self.pipeline = Some(
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Viewport Render Pipeline"),
-                layout: Some(&render_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: "vs_main",
-                    buffers: &[VertexUV::desc()],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: "fs_main",
-                    targets: &[wgpu::ColorTargetState {
-                        format: config.format,
-                        blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    }],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    unclipped_depth: false,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState {
-                    count: 1,
-                    mask: !0,
-                    alpha_to_coverage_enabled: false,
-                },
-                multiview: None,
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Viewport Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &[VertexUV::desc()],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                targets: &[wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                }],
             }),
-        );
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        });
+
+        self.backend = Some(RenderBackend {
+            pipeline,
+            diffuse_bind_group,
+            camera_bind_group,
+            camera_bind_group_layout,
+        })
     }
 
     fn render(&self, rect: Rect, context: &Context) -> wgpu::CommandBuffer {
+        let backend = self.backend.as_ref().unwrap();
+
         let mut encoder =
             context
                 .global
@@ -190,13 +202,38 @@ impl Panel for Viewport {
             }],
             depth_stencil_attachment: None,
         });
-        renderpass.set_pipeline(self.pipeline.as_ref().unwrap());
-        renderpass.set_bind_group(0, self.diffuse_bind_group.as_ref().unwrap(), &[]);
-        renderpass.set_bind_group(1, self.camera_bind_group.as_ref().unwrap(), &[]);
+        renderpass.set_pipeline(&backend.pipeline);
+        renderpass.set_bind_group(0, &backend.diffuse_bind_group, &[]);
+        renderpass.set_bind_group(1, &backend.camera_bind_group, &[]);
         renderpass.set_vertex_buffer(0, vertex_buffer.slice(..));
         renderpass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         renderpass.draw_indexed(0..buffer.indices_uv.len() as u32, 0, 0..1);
         drop(renderpass);
         encoder.finish()
+    }
+
+    fn resize(&mut self, context: &ContextGlobal, width: u32, height: u32) {
+        self.camera.aspect = width as f64 / height as f64;
+        let mut camera_uniform = camera::CameraUniform::new();
+        camera_uniform.update_view_proj(&self.camera);
+        let camera_buffer = context
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Camera Buffer"),
+                contents: bytemuck::cast_slice(&[camera_uniform]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+
+        let backend = self.backend.as_mut().unwrap();
+        backend.camera_bind_group = context
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &backend.camera_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }],
+                label: Some("camera_bind_group"),
+            });
     }
 }

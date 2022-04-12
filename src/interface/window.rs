@@ -1,6 +1,6 @@
 use pollster;
 use winit::{
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -33,8 +33,13 @@ impl Window {
         self.layout.grow();
     }
 
-    pub fn size(&self) -> usize {
-        self.panels.len()
+    pub fn resize(&mut self, context: &mut ContextGlobal, new_size: winit::dpi::PhysicalSize<u32>) {
+        context.config.width = new_size.width;
+        context.config.height = new_size.height;
+        context.surface.configure(&context.device, &context.config);
+        self.panels
+            .iter_mut()
+            .for_each(|x| x.resize(context, new_size.width, new_size.height));
     }
 
     pub fn run(mut self) {
@@ -42,7 +47,7 @@ impl Window {
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-        let context = pollster::block_on(ContextGlobal::init_wgpu(&window));
+        let mut context = pollster::block_on(ContextGlobal::init_wgpu(&window));
         self.panels.iter_mut().for_each(|x| x.init(&context));
 
         event_loop.run(move |event, _, contrl_flow| {
@@ -50,9 +55,27 @@ impl Window {
 
             match event {
                 Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
+                    ref event,
                     window_id,
-                } if window_id == window.id() => *contrl_flow = ControlFlow::Exit,
+                } if window_id == window.id() => match event {
+                    WindowEvent::CloseRequested
+                    | WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    } => *contrl_flow = ControlFlow::Exit,
+                    WindowEvent::Resized(physical_size) => {
+                        self.resize(&mut context, *physical_size);
+                    }
+                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                        self.resize(&mut context, **new_inner_size);
+                    }
+                    _ => {}
+                },
                 Event::RedrawRequested(window_id) if window_id == window.id() => {
                     self.render(&context);
                 }

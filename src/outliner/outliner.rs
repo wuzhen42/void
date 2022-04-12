@@ -112,4 +112,6 @@ impl Panel for Outliner {
         drop(renderpass);
         encoder.finish()
     }
+
+    fn resize(&mut self, context: &ContextGlobal, width: u32, height: u32) {}
 }

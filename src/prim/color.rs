@@ -6,24 +6,12 @@ pub struct RGB {
 }
 
 impl RGB {
-    pub const BLACK: Self = Self {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-    };
-    pub const RED: Self = Self {
-        r: 1.0,
-        g: 0.0,
-        b: 0.0,
-    };
-    pub const GREEN: Self = Self {
-        r: 0.0,
-        g: 1.0,
-        b: 0.0,
-    };
-    pub const BLUE: Self = Self {
-        r: 0.0,
-        g: 0.0,
-        b: 1.0,
-    };
+    pub const fn new(r: f64, g: f64, b: f64) -> Self {
+        Self { r, g, b }
+    }
+
+    pub const BLACK: Self = Self::new(0.0, 0.0, 0.0);
+    pub const RED: Self = Self::new(1.0, 0.0, 0.0);
+    pub const GREEN: Self = Self::new(0.0, 1.0, 0.0);
+    pub const BLUE: Self = Self::new(0.0, 0.0, 1.0);
 }
