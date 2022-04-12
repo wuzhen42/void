@@ -8,10 +8,6 @@ pub struct DrawBuffer {
     pub indices_uv: Vec<u16>,
 }
 
-pub trait Panel {
-    fn draw(&self, rect: Rect) -> DrawBuffer;
-}
-
 impl DrawBuffer {
     pub fn new() -> DrawBuffer {
         DrawBuffer {
