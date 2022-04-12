@@ -1,10 +1,13 @@
+mod camera;
 mod context;
 mod draw;
 mod layout;
-mod window;
+mod panel;
 mod texture;
-mod camera;
+mod window;
 
-pub use context::Context;
-pub use draw::{DrawBuffer, Panel};
+pub use context::*;
+pub use draw::DrawBuffer;
+pub use panel::Panel;
 pub use window::Window;
+pub use texture::Texture;
