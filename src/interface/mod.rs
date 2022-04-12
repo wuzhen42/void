@@ -1,4 +1,3 @@
-mod camera;
 mod context;
 mod draw;
 mod layout;

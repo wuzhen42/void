@@ -1,12 +1,15 @@
 use wgpu::util::DeviceExt;
 
+use super::camera;
 use crate::interface::*;
-use crate::prim::Rect;
+use crate::prim::*;
 
 #[derive(Default)]
 pub struct Viewport {
     pipeline: Option<wgpu::RenderPipeline>,
     diffuse_bind_group: Option<wgpu::BindGroup>,
+    camera_bind_group: Option<wgpu::BindGroup>,
+    camera: camera::Camera,
 }
 
 impl Panel for Viewport {
@@ -14,6 +17,47 @@ impl Panel for Viewport {
         let device = &context.device;
         let config = &context.config;
 
+        // init camera
+        self.camera = camera::Camera {
+            eye: Pnt3::new(0.0, 1.0, 2.0),
+            target: Pnt3::ZERO,
+            up: Vec3::Y,
+            aspect: config.width as f64 / config.height as f64,
+            fovy: 45.0f64.to_radians(),
+            znear: 0.1,
+            zfar: 100.0,
+        };
+        let mut camera_uniform = camera::CameraUniform::new();
+        camera_uniform.update_view_proj(&self.camera);
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("camera_bind_group_layout"),
+            });
+        self.camera_bind_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+            label: Some("camera_bind_group"),
+        }));
+
+        // init diffuse bind group
         let diffuse_bytes = include_bytes!("happy-tree.png");
         let diffuse_texture =
             Texture::from_bytes(&device, &context.queue, diffuse_bytes, "happy-tree").unwrap();
@@ -59,10 +103,11 @@ impl Panel for Viewport {
             source: wgpu::ShaderSource::Wgsl(include_str!("texture.wgsl").into()),
         });
 
+        // init pipeline
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Viewport Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
                 push_constant_ranges: &[],
             });
         self.pipeline = Some(
@@ -147,6 +192,7 @@ impl Panel for Viewport {
         });
         renderpass.set_pipeline(self.pipeline.as_ref().unwrap());
         renderpass.set_bind_group(0, self.diffuse_bind_group.as_ref().unwrap(), &[]);
+        renderpass.set_bind_group(1, self.camera_bind_group.as_ref().unwrap(), &[]);
         renderpass.set_vertex_buffer(0, vertex_buffer.slice(..));
         renderpass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         renderpass.draw_indexed(0..buffer.indices_uv.len() as u32, 0, 0..1);

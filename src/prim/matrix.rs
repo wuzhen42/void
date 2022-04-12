@@ -1,5 +1,6 @@
 use super::{Pnt3, Vec3, Vec4};
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Mat4 {
     _e: [f64; 16],
 }
@@ -23,10 +24,10 @@ impl Mat4 {
     #[rustfmt::skip]
     pub fn from_columns(c0: Vec4, c1: Vec4, c2: Vec4, c3: Vec4) -> Mat4 {
         Mat4::new(
-            c0[0], c1[0], c2[0], c3[0],
-            c0[1], c1[1], c2[1], c3[1],
-            c0[2], c1[2], c2[2], c3[2],
-            c0[3], c1[3], c2[3], c3[3],
+            c0[0], c0[1], c0[2], c0[3],
+            c1[0], c1[1], c1[2], c1[3],
+            c2[0], c2[1], c2[2], c2[3],
+            c3[0], c3[1], c3[2], c3[3],
         )
     }
 
@@ -39,7 +40,7 @@ impl Mat4 {
     );
 
     pub fn col(&self, i: usize) -> Vec4 {
-        Vec4::from_slice(&self._e[4 * i..4 * i + 3])
+        Vec4::from_slice(&self._e[4 * i..4 * i + 4])
     }
 
     pub fn row(&self, j: usize) -> Vec4 {
@@ -92,10 +93,10 @@ impl Mat4 {
 impl std::ops::Mul<Mat4> for Mat4 {
     type Output = Mat4;
     fn mul(self, rhs: Mat4) -> Self::Output {
-        let col0 = (0..3).map(|j| self.col(j) * rhs.e(0, j)).sum();
-        let col1 = (0..3).map(|j| self.col(j) * rhs.e(1, j)).sum();
-        let col2 = (0..3).map(|j| self.col(j) * rhs.e(2, j)).sum();
-        let col3 = (0..3).map(|j| self.col(j) * rhs.e(3, j)).sum();
+        let col0 = (0..4).map(|j| self.col(j) * rhs.e(0, j)).sum();
+        let col1 = (0..4).map(|j| self.col(j) * rhs.e(1, j)).sum();
+        let col2 = (0..4).map(|j| self.col(j) * rhs.e(2, j)).sum();
+        let col3 = (0..4).map(|j| self.col(j) * rhs.e(3, j)).sum();
         Mat4::from_columns(col0, col1, col2, col3)
     }
 }
@@ -103,5 +104,15 @@ impl std::ops::Mul<Mat4> for Mat4 {
 impl Into<[f32; 16]> for Mat4 {
     fn into(self) -> [f32; 16] {
         self._e.map(|x| x as f32)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_identity_multiply() {
+        assert_eq!(Mat4::I * Mat4::I, Mat4::I);
     }
 }

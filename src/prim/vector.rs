@@ -40,7 +40,7 @@ impl ops::Div<f64> for Vec2 {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -98,7 +98,7 @@ impl ops::Mul<f64> for Vec3 {
 impl ops::Div<f64> for Vec3 {
     type Output = Vec3;
     fn div(self, rhs: f64) -> Self::Output {
-        Vec3::new(self.x / rhs, self.y / rhs, self.z * rhs)
+        Vec3::new(self.x / rhs, self.y / rhs, self.z / rhs)
     }
 }
 
@@ -160,5 +160,18 @@ impl std::iter::Sum for Vec4 {
         I: Iterator<Item = Vec4>,
     {
         iter.fold(Vec4::ZERO, |a, b| a + b)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalized() {
+        assert_eq!(
+            Vec3::new(0.0, 1.0, 2.0).normalize(),
+            Vec3::new(0.0, 0.4472135954999579277, 0.89442719099991585541)
+        );
     }
 }

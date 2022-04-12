@@ -1,7 +1,7 @@
 use super::{Vec2, Vec3};
 use std::ops;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Pnt2 {
     pub x: f64,
     pub y: f64,
@@ -64,7 +64,7 @@ impl ops::SubAssign<Vec2> for Pnt2 {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Pnt3 {
     pub x: f64,
     pub y: f64,
