@@ -1,5 +1,5 @@
 use super::panel::Panel;
-use crate::prim::{Rect, Vec2};
+use crate::prim::*;
 
 pub enum Orientation {
     Horizontal,
@@ -19,6 +19,8 @@ pub struct Layout {
 }
 
 impl Layout {
+    const MARGIN: f64 = 0.02;
+
     pub fn new(rect: Rect, orient: Orientation) -> Layout {
         Layout {
             children: vec![],
@@ -62,14 +64,17 @@ impl Layout {
             Orientation::Horizontal => Vec2::new(1.0, 0.0),
             Orientation::Vertical => Vec2::new(0.0, 1.0),
         } * rect.extent();
+        let min_start = rect.bottomleft();
         let max_start = match self.orient {
             Orientation::Horizontal => rect.topleft(),
             Orientation::Vertical => rect.bottomright(),
         };
         for (span, child) in left.windows(2).zip(self.children.iter_mut()) {
+            let is_first = span[0] == 0.0;
+            let is_last = span[1] == 1.0;
             let child_rect = Rect::from_corner(
-                rect.bottomleft() + offset * span[0],
-                max_start + offset * span[1],
+                min_start + offset * (span[0] + if is_first { 0.0 } else { 0.5 * Layout::MARGIN }),
+                max_start + offset * (span[1] - if is_last { 0.0 } else { 0.5 * Layout::MARGIN }),
             );
             match child {
                 Node::Leaf(leaf) => leaf.resize(child_rect),
@@ -108,5 +113,16 @@ impl Layout {
             }
         });
         results
+    }
+
+    pub fn on_click(&mut self, position: Pnt2) -> bool {
+        if !self.rect.contains(position) {
+            false
+        } else {
+            self.children.iter_mut().any(|child| match child {
+                Node::Inner(layout) => layout.on_click(position),
+                Node::Leaf(panel) => panel.onclick(position),
+            })
+        }
     }
 }

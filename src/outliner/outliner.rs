@@ -1,5 +1,5 @@
 use crate::interface::*;
-use crate::prim::{Rect, RGB};
+use crate::prim::*;
 
 #[derive(Default)]
 pub struct Outliner {
@@ -15,5 +15,14 @@ impl Panel for Outliner {
         let mut draw = DrawBuffer::default();
         draw.rect(self.rect, RGB::BLUE);
         Some(draw)
+    }
+
+    fn onclick(&mut self, cursor: Pnt2) -> bool {
+        if self.rect.contains(cursor) {
+            println!("Outliner: {:?}", cursor);
+            true
+        } else {
+            false
+        }
     }
 }

@@ -20,6 +20,12 @@ impl<T: Zero> Vector2<T> {
     }
 }
 
+impl<T: Signed + Copy> Vector2<T> {
+    pub fn abs(&self) -> Self {
+        Self::new(abs(self.x), abs(self.y))
+    }
+}
+
 impl<T: Sub<Output = T>> Sub<Vector2<T>> for Vector2<T> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {

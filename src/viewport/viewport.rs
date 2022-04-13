@@ -239,4 +239,13 @@ impl Panel for Viewport {
         self.rect = rect;
         self.update_camera_aspect();
     }
+
+    fn onclick(&mut self, cursor: Pnt2) -> bool {
+        if self.rect.contains(cursor) {
+            println!("Viewport: {:?}", cursor);
+            true
+        } else {
+            false
+        }
+    }
 }

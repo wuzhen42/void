@@ -145,14 +145,14 @@ impl Window {
             context_global
                 .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Outliner Render Encoder"),
+                    label: Some("UI Render Encoder"),
                 });
 
         let vertex_buffer =
             context_global
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Outliner Vertex Buffer"),
+                    label: Some("UI Cd Vertex Buffer"),
                     contents: bytemuck::cast_slice(&buffer.vertices_cd.as_slice()),
                     usage: wgpu::BufferUsages::VERTEX,
                 });
@@ -160,13 +160,13 @@ impl Window {
             context_global
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Outliner Index Buffer"),
+                    label: Some("UI Cd Index Buffer"),
                     contents: bytemuck::cast_slice(&buffer.indices_cd.as_slice()),
                     usage: wgpu::BufferUsages::INDEX,
                 });
 
         let mut renderpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Outliner Render Pass"),
+            label: Some("UI Render Pass"),
             color_attachments: &[wgpu::RenderPassColorAttachment {
                 view: &view,
                 resolve_target: None,
@@ -221,8 +221,8 @@ impl Window {
             } => *keycode == VirtualKeyCode::Escape,
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor = Pnt2::new(
-                    position.x as f64 / self.size.x as f64,
-                    position.y as f64 / self.size.y as f64,
+                    2.0 * (position.x as f64 / self.size.x as f64 - 0.5),
+                    2.0 * (0.5 - position.y as f64 / self.size.y as f64),
                 );
                 true
             }
@@ -230,13 +230,15 @@ impl Window {
                 state: ElementState::Released,
                 button,
                 ..
-            } => {
-                self.on_mouse_up(*button, self.cursor);
-                true
-            }
+            } => self.on_mouse_up(*button, self.cursor),
             _ => false,
         }
     }
 
-    fn on_mouse_up(&mut self, _button: MouseButton, _position: Pnt2) {}
+    fn on_mouse_up(&mut self, button: MouseButton, position: Pnt2) -> bool {
+        match button {
+            MouseButton::Left => self.layout.on_click(position),
+            _ => false,
+        }
+    }
 }

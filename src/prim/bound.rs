@@ -52,4 +52,10 @@ impl Rect {
             max: center + extent / 2.0,
         }
     }
+
+    pub fn contains(&self, pnt: Pnt2) -> bool {
+        let offset = (pnt - self.center()).abs();
+        let half_extent = self.extent().abs() * 0.5;
+        offset.x <= half_extent.x && offset.y <= half_extent.y
+    }
 }
