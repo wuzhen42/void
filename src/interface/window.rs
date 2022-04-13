@@ -137,10 +137,8 @@ impl Window {
 
         let buffer: DrawBuffer = self
             .layout
-            .map(|panel| panel.draw())
+            .filter_map(|panel| panel.draw())
             .into_iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
             .sum();
 
         let mut encoder =
@@ -187,14 +185,12 @@ impl Window {
 
         let context = Context {
             global: &context_global,
-            frame: ContextFrame { view: view },
+            frame: ContextFrame { view },
         };
         let command_buffers = self
             .layout
-            .map(|panel| panel.render(&context))
+            .filter_map(|panel| panel.render(&context))
             .into_iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
             .chain(std::iter::once(encoder.finish()));
 
         context_global.queue.submit(command_buffers);

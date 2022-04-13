@@ -92,17 +92,19 @@ impl Layout {
         });
     }
 
-    pub fn map<B, F>(&mut self, f: F) -> Vec<B>
+    pub fn filter_map<B, F>(&mut self, f: F) -> Vec<B>
     where
-        F: Fn(&mut Box<dyn Panel>) -> B + Copy,
+        F: Fn(&mut Box<dyn Panel>) -> Option<B> + Copy,
     {
         let mut results = vec![];
         self.children.iter_mut().for_each(|child| match child {
             Node::Inner(layout) => {
-                results.extend(layout.map(f));
+                results.extend(layout.filter_map(f));
             }
             Node::Leaf(panel) => {
-                results.push(f(panel));
+                if let Some(x) = f(panel) {
+                    results.push(x);
+                }
             }
         });
         results
