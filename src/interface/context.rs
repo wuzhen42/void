@@ -13,7 +13,7 @@ pub struct ContextFrame {
 
 pub struct Context<'a> {
     pub global: &'a ContextGlobal,
-    pub local: ContextFrame,
+    pub frame: ContextFrame,
 }
 
 #[repr(C)]

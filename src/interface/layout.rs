@@ -1,14 +1,14 @@
+use super::panel::Panel;
 use crate::prim::{Rect, Vec2};
 
-#[derive(Debug, PartialEq)]
-enum Orientation {
+pub enum Orientation {
     Horizontal,
     Vertical,
 }
 
 enum Node {
     Inner(Layout),
-    Leaf(Rect),
+    Leaf(Box<dyn Panel>),
 }
 
 pub struct Layout {
@@ -19,21 +19,31 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(rect: Rect) -> Layout {
+    pub fn new(rect: Rect, orient: Orientation) -> Layout {
         Layout {
             children: vec![],
             weights: vec![],
-            orient: Orientation::Horizontal,
+            orient,
             rect,
         }
     }
 
-    pub fn grow(&mut self) {
-        self.grow_with_weight(1.0);
+    pub fn grow(&mut self, panel: Box<dyn Panel>) {
+        self.grow_with_weight(panel, 1.0);
     }
 
-    pub fn grow_with_weight(&mut self, w: f64) {
-        self.children.push(Node::Leaf(Rect::empty()));
+    pub fn grow_with_weight(&mut self, panel: Box<dyn Panel>, w: f64) {
+        self.children.push(Node::Leaf(panel));
+        self.weights.push(w);
+        self.resize(self.rect);
+    }
+
+    pub fn push(&mut self, child: Layout) {
+        self.push_with_weight(child, 1.0);
+    }
+
+    pub fn push_with_weight(&mut self, child: Layout, w: f64) {
+        self.children.push(Node::Inner(child));
         self.weights.push(w);
         self.resize(self.rect);
     }
@@ -52,72 +62,49 @@ impl Layout {
             Orientation::Horizontal => Vec2::new(1.0, 0.0),
             Orientation::Vertical => Vec2::new(0.0, 1.0),
         } * rect.extent();
+        let max_start = match self.orient {
+            Orientation::Horizontal => rect.topleft(),
+            Orientation::Vertical => rect.bottomright(),
+        };
         for (span, child) in left.windows(2).zip(self.children.iter_mut()) {
             let child_rect = Rect::from_corner(
                 rect.bottomleft() + offset * span[0],
-                rect.topleft() + offset * span[1],
+                max_start + offset * span[1],
             );
             match child {
-                Node::Leaf(leaf) => *leaf = child_rect,
+                Node::Leaf(leaf) => leaf.resize(child_rect),
                 Node::Inner(layout) => layout.resize(rect),
             }
         }
     }
 
-    pub fn leaves(&self) -> Vec<Rect> {
-        let mut result = vec![];
-        for child in self.children.iter() {
-            match child {
-                Node::Inner(layout) => {
-                    result.extend(layout.leaves());
-                }
-                Node::Leaf(rect) => {
-                    result.push(*rect);
-                }
+    pub fn for_each<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Box<dyn Panel>) + Copy,
+    {
+        self.children.iter_mut().for_each(|child| match child {
+            Node::Inner(layout) => {
+                layout.for_each(f);
             }
-        }
-        result
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::prim::Pnt2;
-
-    #[test]
-    fn test_resize_average() {
-        let mut root = Layout::new(Rect::from_corner(
-            Pnt2::new(-1.0, -1.0),
-            Pnt2::new(1.0, 1.0),
-        ));
-        root.grow();
-        root.grow();
-        let leaves = root.leaves();
-        assert_eq!(leaves.len(), 2);
-        assert_eq!(leaves[0].min, Pnt2::new(-1.0, -1.0));
-        assert_eq!(leaves[0].max, Pnt2::new(0.0, 1.0));
-        assert_eq!(leaves[1].min, Pnt2::new(0.0, -1.0));
-        assert_eq!(leaves[1].max, Pnt2::new(1.0, 1.0));
+            Node::Leaf(panel) => {
+                f(panel);
+            }
+        });
     }
 
-    #[test]
-    fn test_resize_weighted() {
-        let mut root = Layout::new(Rect::from_corner(
-            Pnt2::new(-1.0, -1.0),
-            Pnt2::new(1.0, 1.0),
-        ));
-        root.grow_with_weight(1.0);
-        root.grow_with_weight(2.0);
-        root.grow_with_weight(1.0);
-
-        let leaves = root.leaves();
-        assert_eq!(leaves.len(), 3);
-        assert_eq!(leaves[0].min, Pnt2::new(-1.0, -1.0));
-        assert_eq!(leaves[0].max, Pnt2::new(-0.5, 1.0));
-        assert_eq!(leaves[1].min, Pnt2::new(-0.5, -1.0));
-        assert_eq!(leaves[1].max, Pnt2::new(0.5, 1.0));
-        assert_eq!(leaves[2].min, Pnt2::new(0.5, -1.0));
-        assert_eq!(leaves[2].max, Pnt2::new(1.0, 1.0));
+    pub fn map<B, F>(&mut self, f: F) -> Vec<B>
+    where
+        F: Fn(&mut Box<dyn Panel>) -> B + Copy,
+    {
+        let mut results = vec![];
+        self.children.iter_mut().for_each(|child| match child {
+            Node::Inner(layout) => {
+                results.extend(layout.map(f));
+            }
+            Node::Leaf(panel) => {
+                results.push(f(panel));
+            }
+        });
+        results
     }
 }

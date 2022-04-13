@@ -1,10 +1,19 @@
-use crate::prim::Rect;
 use super::context::*;
+use super::draw::DrawBuffer;
+use crate::prim::*;
 
 pub trait Panel {
-    fn init(&mut self, context: &ContextGlobal);
+    fn init(&mut self, _: &ContextGlobal) {}
 
-    fn render(&self, rect: Rect, context: &Context) -> wgpu::CommandBuffer;
+    fn draw(&self) -> Option<DrawBuffer> {
+        None
+    }
 
-    fn resize(&mut self, context: &ContextGlobal, width: u32, height: u32);
+    fn render(&self, _: &Context) -> Option<wgpu::CommandBuffer> {
+        None
+    }
+
+    fn on_window_stretch(&mut self, _: Vector2<u32>) {}
+
+    fn resize(&mut self, rect: Rect);
 }

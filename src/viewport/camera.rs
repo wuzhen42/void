@@ -1,6 +1,6 @@
 use crate::prim::{Mat4, Pnt3, Vec3};
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub struct Camera {
     pub eye: Pnt3,
     pub target: Pnt3,
@@ -48,41 +48,18 @@ impl CameraUniform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cgmath;
 
+    #[rustfmt::skip]
     #[test]
     fn test_lookat() {
         assert_eq!(
-            Mat4::lookat(Pnt3::new(0.0, 1.0, 2.0), Pnt3::ZERO, Vec3::Y),
+            Mat4::lookat(Pnt3::new(0.0, 1.0, 2.0), Pnt3::zero(), Vec3::axisy()),
             Mat4::new(
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.8944271909999159,
-                0.4472135954999579,
-                0.0,
-                0.0,
-                -0.4472135954999579,
-                0.8944271909999159,
-                0.0,
-                0.0,
-                0.0,
-                -2.23606797749979,
-                1.0
+                1.0,    0.0,                    0.0,                    0.0,
+                0.0,    0.8944271909999159,     0.4472135954999579,     0.0,
+                0.0,    -0.4472135954999579,    0.8944271909999159,     0.0,
+                0.0,    0.0,                    -2.23606797749979,      1.0
             )
         );
-    }
-
-    #[test]
-    fn test_perspective() {
-        let a = Mat4::perspective(45.0f64.to_radians(), 4.0 / 3.0, 0.1, 100.0);
-        let b = cgmath::perspective(cgmath::Deg(45.0), 4.0 / 3.0, 0.1, 100.0);
-        for col in 0..4 {
-            for row in 0..4 {
-                assert_eq!(a.e(col, row), b[col][row]);
-            }
-        }
     }
 }

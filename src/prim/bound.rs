@@ -1,6 +1,6 @@
 use super::{point::Pnt2, vector::Vec2};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Rect {
     pub min: Pnt2,
     pub max: Pnt2,
@@ -15,26 +15,28 @@ impl Rect {
         self.max - self.min
     }
 
-    pub fn topleft(&self) -> Pnt2 {
-        Pnt2 {
-            x: self.min.x,
-            y: self.max.y,
-        }
+    pub fn width(&self) -> f64 {
+        self.max.x - self.min.x
+    }
+
+    pub fn height(&self) -> f64 {
+        self.max.y - self.min.y
     }
 
     pub fn bottomleft(&self) -> Pnt2 {
         self.min
     }
 
-    pub fn topright(&self) -> Pnt2 {
-        self.max
+    pub fn bottomright(&self) -> Pnt2 {
+        Pnt2::new(self.max.x, self.min.y)
     }
 
-    pub fn empty() -> Rect {
-        Rect {
-            min: Pnt2::ZERO,
-            max: Pnt2::ZERO,
-        }
+    pub fn topleft(&self) -> Pnt2 {
+        Pnt2::new(self.min.x, self.max.y)
+    }
+
+    pub fn topright(&self) -> Pnt2 {
+        self.max
     }
 
     pub fn from_corner(bottomleft: Pnt2, topright: Pnt2) -> Rect {
