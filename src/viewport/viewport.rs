@@ -1,4 +1,5 @@
 use wgpu::util::DeviceExt;
+use winit::event::VirtualKeyCode;
 
 use super::camera;
 use crate::interface::*;
@@ -7,7 +8,8 @@ use crate::prim::*;
 struct RenderBackend {
     pub pipeline: wgpu::RenderPipeline,
     pub diffuse_bind_group: wgpu::BindGroup,
-    pub camera_bind_group_layout: wgpu::BindGroupLayout,
+    pub camera_buffer: wgpu::Buffer,
+    pub camera_bind_group: wgpu::BindGroup,
 }
 
 #[derive(Default)]
@@ -31,17 +33,25 @@ impl Panel for Viewport {
         let config = &context.config;
 
         // init camera
+        self.window_ratio = config.width as f64 / config.height as f64;
         self.camera = camera::Camera {
             eye: Pnt3::new(0.0, 1.0, 2.0),
             target: Pnt3::zero(),
             up: Vec3::axisy(),
-            aspect: config.width as f64 / config.height as f64,
+            aspect: 1.0,
             fovy: 45.0f64.to_radians(),
             znear: 0.1,
             zfar: 100.0,
         };
+        self.update_camera_aspect();
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&self.camera);
+
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
         let camera_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[wgpu::BindGroupLayoutEntry {
@@ -56,6 +66,14 @@ impl Panel for Viewport {
                 }],
                 label: Some("camera_bind_group_layout"),
             });
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+            label: Some("camera_bind_group"),
+        });
 
         // init diffuse bind group
         let diffuse_bytes = include_bytes!("happy-tree.png");
@@ -148,7 +166,8 @@ impl Panel for Viewport {
         self.backend = Some(RenderBackend {
             pipeline,
             diffuse_bind_group,
-            camera_bind_group_layout,
+            camera_buffer,
+            camera_bind_group,
         })
     }
 
@@ -157,28 +176,12 @@ impl Panel for Viewport {
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&self.camera);
-        let camera_buffer =
-            context
-                .global
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Camera Buffer"),
-                    contents: bytemuck::cast_slice(&[camera_uniform]),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                });
+        context.global.queue.write_buffer(
+            &backend.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[camera_uniform]),
+        );
 
-        let camera_bind_group =
-            context
-                .global
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    layout: &backend.camera_bind_group_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: camera_buffer.as_entire_binding(),
-                    }],
-                    label: Some("camera_bind_group"),
-                });
         let mut encoder =
             context
                 .global
@@ -222,14 +225,16 @@ impl Panel for Viewport {
         });
         renderpass.set_pipeline(&backend.pipeline);
         renderpass.set_bind_group(0, &backend.diffuse_bind_group, &[]);
-        renderpass.set_bind_group(1, &camera_bind_group, &[]);
+        renderpass.set_bind_group(1, &backend.camera_bind_group, &[]);
         renderpass.set_vertex_buffer(0, vertex_buffer.slice(..));
         renderpass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         renderpass.draw_indexed(0..buffer.indices_uv.len() as u32, 0, 0..1);
         drop(renderpass);
         Some(encoder.finish())
     }
+}
 
+impl Widget for Viewport {
     fn on_window_stretch(&mut self, size: Vector2<u32>) {
         self.window_ratio = size.x as f64 / size.y as f64;
         self.update_camera_aspect();
@@ -242,10 +247,31 @@ impl Panel for Viewport {
 
     fn onclick(&mut self, cursor: Pnt2) -> bool {
         if self.rect.contains(cursor) {
-            println!("Viewport: {:?}", cursor);
             true
         } else {
             false
+        }
+    }
+
+    fn onkeydown(&mut self, key: VirtualKeyCode) -> bool {
+        match key {
+            VirtualKeyCode::W | VirtualKeyCode::Up => {
+                self.camera.eye.z -= 1.0;
+                true
+            }
+            VirtualKeyCode::S | VirtualKeyCode::Down => {
+                self.camera.eye.z += 1.0;
+                true
+            }
+            VirtualKeyCode::A | VirtualKeyCode::Left => {
+                self.camera.eye.x -= 1.0;
+                true
+            }
+            VirtualKeyCode::D | VirtualKeyCode::Right => {
+                self.camera.eye.x += 1.0;
+                true
+            }
+            _ => false,
         }
     }
 }

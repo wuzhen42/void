@@ -1,5 +1,6 @@
-use super::panel::Panel;
+use super::panel::{Panel, Widget};
 use crate::prim::*;
+use winit::event::VirtualKeyCode;
 
 pub enum Orientation {
     Horizontal,
@@ -114,15 +115,28 @@ impl Layout {
         });
         results
     }
+}
 
-    pub fn on_click(&mut self, position: Pnt2) -> bool {
-        if !self.rect.contains(position) {
+impl Widget for Layout {
+    fn resize(&mut self, rect: Rect) {
+        self.for_each(|x| x.resize(rect));
+    }
+
+    fn onclick(&mut self, cursor: Pnt2) -> bool {
+        if !self.rect.contains(cursor) {
             false
         } else {
             self.children.iter_mut().any(|child| match child {
-                Node::Inner(layout) => layout.on_click(position),
-                Node::Leaf(panel) => panel.onclick(position),
+                Node::Inner(layout) => layout.onclick(cursor),
+                Node::Leaf(panel) => panel.onclick(cursor),
             })
         }
+    }
+
+    fn onkeydown(&mut self, key: VirtualKeyCode) -> bool {
+        self.children.iter_mut().any(|child| match child {
+            Node::Inner(layout) => layout.onkeydown(key),
+            Node::Leaf(panel) => panel.onkeydown(key),
+        })
     }
 }

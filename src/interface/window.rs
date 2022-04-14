@@ -8,8 +8,8 @@ use winit::{
 use wgpu;
 use wgpu::util::DeviceExt;
 
-use super::layout::*;
 use super::{context::*, DrawBuffer};
+use super::{layout::*, Widget};
 use crate::prim::*;
 
 pub struct Window {
@@ -214,11 +214,11 @@ impl Window {
                 input:
                     KeyboardInput {
                         state: ElementState::Pressed,
-                        virtual_keycode: Some(keycode),
+                        virtual_keycode: Some(key),
                         ..
                     },
                 ..
-            } => *keycode == VirtualKeyCode::Escape,
+            } => self.layout.onkeydown(*key),
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor = Pnt2::new(
                     2.0 * (position.x as f64 / self.size.x as f64 - 0.5),
@@ -237,7 +237,7 @@ impl Window {
 
     fn on_mouse_up(&mut self, button: MouseButton, position: Pnt2) -> bool {
         match button {
-            MouseButton::Left => self.layout.on_click(position),
+            MouseButton::Left => self.layout.onclick(position),
             _ => false,
         }
     }
